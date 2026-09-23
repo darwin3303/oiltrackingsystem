@@ -10,6 +10,15 @@ function toDDMMYYYY(iso){
   return `${d}-${m}-${y}`;
 }
 
+// Same as toDDMMYYYY but slash-separated, for the WhatsApp message template.
+function toDDMMYYYYSlash(iso){
+  if(!iso) return "—";
+  const datePart = String(iso).split("T")[0];
+  const [y,m,d] = datePart.split("-");
+  if(!y || !m || !d) return "—";
+  return `${d}/${m}/${y}`;
+}
+
 // ---------- Theme toggle ----------
 function applyTheme(theme){
   document.documentElement.setAttribute("data-theme", theme);
@@ -199,20 +208,43 @@ function toWhatsAppNumber(phone){
   return digits;
 }
 
-function buildWhatsAppLink(r, vehicle, compsText){
+function buildWhatsAppLink(r, comps){
   const waNumber = toWhatsAppNumber(r.customer_phone);
   if(!waNumber) return null;
+
+  const componentLines = comps.length
+    ? comps.map(c => `* ${c}`).join("\n")
+    : `* No additional components changed`;
+
   const message = [
-    `Hi ${r.customer_name || "there"}, this is Nandana Auto Electricals.`,
+    `Dear Sir/Madam,`,
     ``,
-    `Your vehicle ${r.plate}${vehicle !== "—" ? ` (${vehicle})` : ""} was serviced on ${toDDMMYYYY(r.service_date)}.`,
-    `Oil Grade: ${r.oil_grade || "—"}`,
-    `Components changed: ${compsText}`,
+    `Thank you for choosing *Nandana Auto Electricals & Spare Parts* for your vehicle service.`,
     ``,
-    `Next expected service: ${toDDMMYYYY(r.next_service_date)} or ${(r.next_odometer||0).toLocaleString()} km, whichever comes first.`,
+    `🔧 *Service Details*`,
     ``,
-    `Thank you for choosing us!`,
+    `📅 Service Date: ${toDDMMYYYYSlash(r.service_date)}`,
+    `🚗 Odometer Reading: ${(r.odometer||0).toLocaleString()} km`,
+    `🛢️ Engine Oil Grade: ${r.oil_grade || "—"}`,
+    `🔩 Components Changed:`,
+    componentLines,
+    ``,
+    `📅 *Expected Next Service:* ${toDDMMYYYYSlash(r.next_service_date)} or ${(r.next_odometer||0).toLocaleString()} km`,
+    ``,
+    `We recommend completing the next service on or before the above date or mileage to maintain the vehicle's performance and reliability.`,
+    ``,
+    `We would also appreciate your continued support. ❤️`,
+    ``,
+    `👍 *Follow us on Facebook:* https://www.facebook.com/profile.php?id=61581431322976&mibextid=wwXIfr&mibextid=wwXIfr`,
+    ``,
+    `⭐ *Leave us a Google Review:* https://share.google/KbDKx8eHPUr5VBWz7`,
+    ``,
+    `Thank you for choosing *Nandana Auto Electricals & Spare Parts*. We appreciate your trust and look forward to serving you again.`,
+    ``,
+    `Best regards,`,
+    `*Nandana Auto Electricals & Spare Parts*`,
   ].join("\n");
+
   return `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
 }
 
@@ -228,9 +260,8 @@ function renderRecords(records){
     if(r.comp_cabin_filter) comps.push("Cabin Filter");
     if(r.comp_engine_filter) comps.push("Engine Filter");
     const compHtml = comps.length ? comps.map(c=>`<span class="tag">${c}</span>`).join("") : `<span class="record-sub">No extra components changed</span>`;
-    const compsText = comps.length ? comps.join(", ") : "None";
     const vehicle = [r.vehicle_make, r.vehicle_model].filter(Boolean).join(" ") || "—";
-    const waLink = buildWhatsAppLink(r, vehicle, compsText);
+    const waLink = buildWhatsAppLink(r, comps);
     const waButton = waLink
       ? `<a class="waBtn" href="${waLink}" target="_blank" rel="noopener">WhatsApp</a>`
       : `<span class="waBtn waBtn-disabled" title="No phone number on file">WhatsApp</span>`;
