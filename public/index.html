@@ -23,6 +23,7 @@
 
 <nav>
   <button id="tabBtnEntry" class="active">Service Entry</button>
+  <button id="tabBtnReminders">Reminders <span id="reminderCount" class="count-badge hidden">0</span></button>
   <button id="tabBtnSettings">Settings &amp; Summary</button>
 </nav>
 
@@ -82,6 +83,21 @@
           </tr>
         </thead>
         <tbody id="recordsBody"><tr><td colspan="13" class="empty">Loading records…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="panelReminders" class="panel hidden">
+    <h2>Upcoming &amp; Overdue Oil Changes</h2>
+    <p class="sub">Vehicles due for their next oil change within 7 days, or already overdue. A reminder is raised one week before the expected date.</p>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Plate</th><th>Customer</th><th>Phone</th><th>Vehicle</th><th>Next Service</th><th>Next Odometer</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="remindersBody"><tr><td colspan="7" class="empty">Loading reminders…</td></tr></tbody>
       </table>
     </div>
   </section>

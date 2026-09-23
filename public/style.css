@@ -40,6 +40,13 @@ nav button{
   border-bottom:none;
 }
 nav button.active{background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
+.count-badge{
+  display:inline-block; min-width:18px; padding:1px 6px; margin-left:6px; border-radius:10px;
+  background:var(--danger); color:#fff; font-size:0.72rem; font-weight:700;
+}
+.count-badge.hidden{display:none;}
+.badge-overdue{display:inline-block; padding:3px 9px; border-radius:6px; background:var(--danger); color:#fff; font-size:0.75rem; font-weight:600;}
+.badge-soon{display:inline-block; padding:3px 9px; border-radius:6px; background:var(--accent); color:var(--accent-text); font-size:0.75rem; font-weight:600;}
 main{padding:0 20px 40px; max-width:920px; margin:0 auto;}
 .panel{background:var(--card); border:1px solid var(--border); border-radius:0 10px 10px 10px; padding:20px;}
 .hidden{display:none;}

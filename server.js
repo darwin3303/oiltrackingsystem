@@ -132,6 +132,20 @@ app.delete('/api/records/:id', async (req, res) => {
   }
 });
 
+// ---------- Reminders: vehicles due for an oil change within 7 days (or overdue) ----------
+app.get('/api/reminders', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM service_records
+       WHERE next_service_date <= (CURRENT_DATE + INTERVAL '7 days')
+       ORDER BY next_service_date ASC`
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---------- Summary: oil grade usage counts ----------
 app.get('/api/summary/oil-grades', async (req, res) => {
   try {

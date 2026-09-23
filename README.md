@@ -84,3 +84,4 @@ oil-app/
 | DELETE | /api/records/:id            | Delete a record                            |
 | GET/POST/DELETE | /api/oil_grades, /api/technicians, /api/vehicle_makes | Manage dropdown lists |
 | GET    | /api/summary/oil-grades     | Usage counts per oil grade                 |
+| GET    | /api/reminders               | Vehicles due within 7 days or overdue      |

@@ -44,13 +44,16 @@ setInterval(checkStatus, 30000);
 
 // ---------- Tabs ----------
 function showTab(tab){
-  const entry = tab === "entry";
-  $("panelEntry").classList.toggle("hidden", !entry);
-  $("panelSettings").classList.toggle("hidden", entry);
-  $("tabBtnEntry").classList.toggle("active", entry);
-  $("tabBtnSettings").classList.toggle("active", !entry);
+  $("panelEntry").classList.toggle("hidden", tab !== "entry");
+  $("panelReminders").classList.toggle("hidden", tab !== "reminders");
+  $("panelSettings").classList.toggle("hidden", tab !== "settings");
+  $("tabBtnEntry").classList.toggle("active", tab === "entry");
+  $("tabBtnReminders").classList.toggle("active", tab === "reminders");
+  $("tabBtnSettings").classList.toggle("active", tab === "settings");
+  if(tab === "reminders") refreshReminders();
 }
 $("tabBtnEntry").addEventListener("click", () => showTab("entry"));
+$("tabBtnReminders").addEventListener("click", () => showTab("reminders"));
 $("tabBtnSettings").addEventListener("click", () => showTab("settings"));
 
 // ---------- Next service preview ----------
@@ -181,6 +184,7 @@ function renderRecords(records){
     btn.addEventListener("click", async () => {
       await fetch(`/api/records/${btn.dataset.id}`, { method: "DELETE" });
       await refreshRecordsAndSummary();
+      await refreshReminders();
     });
   });
 }
@@ -214,6 +218,52 @@ function renderSummary(entries){
       <div class="bar-track"><div class="bar-fill" style="width:${(Number(e.count)/max*100).toFixed(0)}%"></div></div>
       <span>${e.count}</span>
     </div>`).join("");
+}
+
+// ---------- Reminders ----------
+function daysBetween(iso){
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const target = new Date(iso + "T00:00:00");
+  return Math.round((target - today) / 86400000);
+}
+
+function renderReminders(records){
+  const body = $("remindersBody");
+  const badge = $("reminderCount");
+  if(records.length === 0){
+    body.innerHTML = `<tr><td colspan="7" class="empty">No vehicles due soon — nothing within 7 days or overdue.</td></tr>`;
+    badge.classList.add("hidden");
+    return;
+  }
+  badge.textContent = records.length;
+  badge.classList.remove("hidden");
+  body.innerHTML = records.map(r => {
+    const vehicle = [r.vehicle_make, r.vehicle_model].filter(Boolean).join(" ") || "—";
+    const d = daysBetween(r.next_service_date);
+    const status = d < 0
+      ? `<span class="badge-overdue">${Math.abs(d)} day${Math.abs(d)===1?"":"s"} overdue</span>`
+      : `<span class="badge-soon">Due in ${d} day${d===1?"":"s"}</span>`;
+    return `<tr>
+      <td>${r.plate||""}</td>
+      <td>${r.customer_name||""}</td>
+      <td>${r.customer_phone||"—"}</td>
+      <td>${vehicle}</td>
+      <td>${toDDMMYYYY(r.next_service_date)}</td>
+      <td>${(r.next_odometer||0).toLocaleString()} km</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join("");
+}
+
+async function refreshReminders(){
+  try{
+    const res = await fetch("/api/reminders");
+    const records = await res.json();
+    renderReminders(records);
+  }catch(e){
+    $("remindersBody").innerHTML = `<tr><td colspan="7" class="empty">Could not load reminders.</td></tr>`;
+  }
 }
 
 // ---------- Save new record ----------
@@ -258,6 +308,7 @@ $("saveBtn").addEventListener("click", async () => {
     $("compEngineFilter").checked = false;
     updatePreview();
     await refreshRecordsAndSummary();
+    await refreshReminders();
     setTimeout(() => $("saveStatus").textContent = "", 2500);
   }catch(e){
     $("saveStatus").textContent = "Could not save — please try again.";
@@ -269,6 +320,7 @@ $("saveBtn").addEventListener("click", async () => {
   try{
     await Promise.all([refreshGrades(), refreshTechnicians(), refreshMakes()]);
     await refreshRecordsAndSummary();
+    await refreshReminders();
   }catch(e){
     $("recordsBody").innerHTML = `<tr><td colspan="13" class="empty">Could not load data from the server.</td></tr>`;
   }
