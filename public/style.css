@@ -45,8 +45,28 @@ nav button.active{background:var(--accent); color:var(--accent-text); border-col
   background:var(--danger); color:#fff; font-size:0.72rem; font-weight:700;
 }
 .count-badge.hidden{display:none;}
-.badge-overdue{display:inline-block; padding:3px 9px; border-radius:6px; background:var(--danger); color:#fff; font-size:0.75rem; font-weight:600;}
-.badge-soon{display:inline-block; padding:3px 9px; border-radius:6px; background:var(--accent); color:var(--accent-text); font-size:0.75rem; font-weight:600;}
+.badge-overdue{display:inline-block; padding:4px 11px; border-radius:20px; background:var(--danger); color:#fff; font-size:0.8rem; font-weight:700; white-space:nowrap;}
+.badge-soon{display:inline-block; padding:4px 11px; border-radius:20px; background:var(--accent); color:var(--accent-text); font-size:0.8rem; font-weight:700; white-space:nowrap;}
+
+.reminder-list{display:flex; flex-direction:column; gap:14px; margin-top:18px;}
+.reminder-card{
+  border:1px solid var(--border); border-left:6px solid var(--accent); border-radius:12px;
+  padding:16px 18px; background:var(--card); box-shadow:0 1px 3px rgba(0,0,0,0.06);
+}
+.reminder-card.overdue{border-left-color:var(--danger);}
+.reminder-card-top{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+.reminder-plate{font-size:1.2rem; font-weight:800; letter-spacing:0.01em; color:var(--text);}
+.reminder-card-body{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:16px; margin-top:12px;}
+.reminder-info{display:flex; flex-direction:column; gap:4px;}
+.reminder-customer{font-size:1rem; font-weight:600; color:var(--text);}
+.reminder-sub{font-size:0.85rem; color:var(--muted);}
+.reminder-next{display:flex; gap:26px; flex-wrap:wrap;}
+.reminder-next-label{display:block; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted); margin-bottom:3px;}
+.reminder-next-value{display:block; font-size:1.1rem; font-weight:700; color:var(--text);}
+@media (max-width:520px){
+  .reminder-card-body{flex-direction:column; align-items:flex-start;}
+  .reminder-next{gap:20px;}
+}
 main{padding:0 20px 40px; max-width:920px; margin:0 auto;}
 .panel{background:var(--card); border:1px solid var(--border); border-radius:0 10px 10px 10px; padding:20px;}
 .hidden{display:none;}
@@ -80,12 +100,41 @@ input[type=text], input[type=number], input[type=date], input[type=tel], select{
 }
 .next-value{display:block; font-size:1.7rem; font-weight:700; color:var(--navy-text); line-height:1.2;}
 @media (max-width:520px){.next-value{font-size:1.4rem;}}
-table{width:100%; border-collapse:collapse; font-size:0.8rem;}
-th,td{padding:8px 6px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap;}
-th{color:var(--muted); font-weight:600;}
-.tablewrap{overflow-x:auto; margin-top:18px;}
-.tag{display:inline-block; padding:2px 7px; border-radius:6px; background:var(--bg); border:1px solid var(--border); font-size:0.72rem; margin-right:3px;}
-.row-actions button{border:none; background:none; color:var(--danger); cursor:pointer; font-size:0.8rem;}
+#recordsSearch{margin-bottom:16px;}
+
+/* Service Records tab: card layout */
+.record-list{display:flex; flex-direction:column; gap:14px;}
+.record-card{
+  border:1px solid var(--border); border-radius:12px; padding:16px 18px;
+  background:var(--card); box-shadow:0 1px 3px rgba(0,0,0,0.06);
+}
+.record-card-top{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+.record-plate{font-size:1.2rem; font-weight:800; letter-spacing:0.01em; color:var(--text);}
+.record-sub{font-size:0.85rem; color:var(--muted); margin-top:4px;}
+.record-grid{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));
+  gap:12px 18px; margin-top:14px;
+}
+.record-field{display:flex; flex-direction:column; gap:3px;}
+.record-label{font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted);}
+.record-value{font-size:0.98rem; font-weight:600; color:var(--text);}
+.record-components{margin-top:12px;}
+.tag{display:inline-block; padding:4px 11px; border-radius:8px; background:var(--bg); border:1px solid var(--border); font-size:0.82rem; margin:0 6px 6px 0;}
+.record-next{
+  display:flex; gap:26px; flex-wrap:wrap; margin-top:14px; padding-top:14px;
+  border-top:1px dashed var(--border);
+}
+.record-next-label{display:block; font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted); margin-bottom:3px;}
+.record-next-value{display:block; font-size:1.1rem; font-weight:700; color:var(--text);}
+.delRecord{
+  border:1px solid var(--danger); background:none; color:var(--danger);
+  border-radius:8px; padding:6px 12px; font-size:0.85rem; font-weight:600; cursor:pointer;
+}
+.delRecord:hover{background:var(--danger); color:#fff;}
+@media (max-width:520px){
+  .record-grid{grid-template-columns:repeat(2, 1fr);}
+  .record-next{gap:20px;}
+}
 .itemlist{list-style:none; padding:0; margin:10px 0 0;}
 .itemlist li{display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; background:var(--bg);}
 .itemlist li button{border:none; background:none; color:var(--danger); cursor:pointer; font-size:0.85rem;}

@@ -188,35 +188,48 @@ async function loadRecords(search){
 }
 
 function renderRecords(records){
-  const body = $("recordsBody");
+  const list = $("recordsList");
   if(records.length === 0){
-    body.innerHTML = `<tr><td colspan="13" class="empty">No matching service records.</td></tr>`;
+    list.innerHTML = `<p class="empty">No matching service records.</p>`;
     return;
   }
-  body.innerHTML = records.map(r => {
+  list.innerHTML = records.map(r => {
     const comps = [];
     if(r.comp_oil_filter) comps.push("Oil Filter");
     if(r.comp_cabin_filter) comps.push("Cabin Filter");
     if(r.comp_engine_filter) comps.push("Engine Filter");
-    const compHtml = comps.length ? comps.map(c=>`<span class="tag">${c}</span>`).join("") : "—";
+    const compHtml = comps.length ? comps.map(c=>`<span class="tag">${c}</span>`).join("") : `<span class="record-sub">No extra components changed</span>`;
     const vehicle = [r.vehicle_make, r.vehicle_model].filter(Boolean).join(" ") || "—";
-    return `<tr>
-      <td>${r.plate||""}</td>
-      <td>${r.customer_name||""}</td>
-      <td>${r.customer_phone||"—"}</td>
-      <td>${vehicle}</td>
-      <td>${toDDMMYYYY(r.service_date)}</td>
-      <td>${(r.odometer||0).toLocaleString()} km</td>
-      <td>${r.oil_grade||""}</td>
-      <td>${r.oil_qty ?? ""}</td>
-      <td>${r.technician||""}</td>
-      <td>${compHtml}</td>
-      <td>${toDDMMYYYY(r.next_service_date)}</td>
-      <td>${(r.next_odometer||0).toLocaleString()} km</td>
-      <td class="row-actions"><button data-id="${r.id}" class="delRecord">Delete</button></td>
-    </tr>`;
+    return `<div class="record-card">
+      <div class="record-card-top">
+        <span class="record-plate">${r.plate||""}</span>
+        <button data-id="${r.id}" class="delRecord">Delete</button>
+      </div>
+      <div class="record-sub">${r.customer_name||"—"} &nbsp;·&nbsp; ${r.customer_phone||"—"} &nbsp;·&nbsp; ${vehicle}</div>
+
+      <div class="record-grid">
+        <div class="record-field"><span class="record-label">Service Date</span><span class="record-value">${toDDMMYYYY(r.service_date)}</span></div>
+        <div class="record-field"><span class="record-label">Odometer</span><span class="record-value">${(r.odometer||0).toLocaleString()} km</span></div>
+        <div class="record-field"><span class="record-label">Oil Grade</span><span class="record-value">${r.oil_grade||"—"}</span></div>
+        <div class="record-field"><span class="record-label">Qty Used</span><span class="record-value">${r.oil_qty ?? "—"} L</span></div>
+        <div class="record-field"><span class="record-label">Technician</span><span class="record-value">${r.technician||"—"}</span></div>
+      </div>
+
+      <div class="record-components">${compHtml}</div>
+
+      <div class="record-next">
+        <div class="record-next-stat">
+          <span class="record-next-label">Next Service</span>
+          <span class="record-next-value">${toDDMMYYYY(r.next_service_date)}</span>
+        </div>
+        <div class="record-next-stat">
+          <span class="record-next-label">Next Odometer</span>
+          <span class="record-next-value">${(r.next_odometer||0).toLocaleString()} km</span>
+        </div>
+      </div>
+    </div>`;
   }).join("");
-  body.querySelectorAll(".delRecord").forEach(btn => {
+  list.querySelectorAll(".delRecord").forEach(btn => {
     btn.addEventListener("click", async () => {
       await fetch(`/api/records/${btn.dataset.id}`, { method: "DELETE" });
       await refreshRecords();
@@ -269,30 +282,44 @@ function daysBetween(iso){
 }
 
 function renderReminders(records){
-  const body = $("remindersBody");
+  const list = $("remindersList");
   const badge = $("reminderCount");
   if(records.length === 0){
-    body.innerHTML = `<tr><td colspan="7" class="empty">No vehicles due soon — nothing within 7 days or overdue.</td></tr>`;
+    list.innerHTML = `<p class="empty">No vehicles due soon — nothing within 7 days or overdue.</p>`;
     badge.classList.add("hidden");
     return;
   }
   badge.textContent = records.length;
   badge.classList.remove("hidden");
-  body.innerHTML = records.map(r => {
+  list.innerHTML = records.map(r => {
     const vehicle = [r.vehicle_make, r.vehicle_model].filter(Boolean).join(" ") || "—";
     const d = daysBetween(r.next_service_date);
-    const status = d < 0
+    const overdue = d < 0;
+    const status = overdue
       ? `<span class="badge-overdue">${Math.abs(d)} day${Math.abs(d)===1?"":"s"} overdue</span>`
       : `<span class="badge-soon">Due in ${d} day${d===1?"":"s"}</span>`;
-    return `<tr>
-      <td>${r.plate||""}</td>
-      <td>${r.customer_name||""}</td>
-      <td>${r.customer_phone||"—"}</td>
-      <td>${vehicle}</td>
-      <td>${toDDMMYYYY(r.next_service_date)}</td>
-      <td>${(r.next_odometer||0).toLocaleString()} km</td>
-      <td>${status}</td>
-    </tr>`;
+    return `<div class="reminder-card ${overdue ? "overdue" : "soon"}">
+      <div class="reminder-card-top">
+        <span class="reminder-plate">${r.plate||""}</span>
+        ${status}
+      </div>
+      <div class="reminder-card-body">
+        <div class="reminder-info">
+          <span class="reminder-customer">${r.customer_name||"—"}</span>
+          <span class="reminder-sub">${r.customer_phone||"—"} &nbsp;·&nbsp; ${vehicle}</span>
+        </div>
+        <div class="reminder-next">
+          <div class="reminder-next-stat">
+            <span class="reminder-next-label">Next Service</span>
+            <span class="reminder-next-value">${toDDMMYYYY(r.next_service_date)}</span>
+          </div>
+          <div class="reminder-next-stat">
+            <span class="reminder-next-label">Next Odometer</span>
+            <span class="reminder-next-value">${(r.next_odometer||0).toLocaleString()} km</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
   }).join("");
 }
 
@@ -302,7 +329,7 @@ async function refreshReminders(){
     const records = await res.json();
     renderReminders(records);
   }catch(e){
-    $("remindersBody").innerHTML = `<tr><td colspan="7" class="empty">Could not load reminders.</td></tr>`;
+    $("remindersList").innerHTML = `<p class="empty">Could not load reminders.</p>`;
   }
 }
 
@@ -364,6 +391,6 @@ $("saveBtn").addEventListener("click", async () => {
     await refreshSummary();
     await refreshReminders();
   }catch(e){
-    $("recordsBody").innerHTML = `<tr><td colspan="13" class="empty">Could not load data from the server.</td></tr>`;
+    $("recordsList").innerHTML = `<p class="empty">Could not load data from the server.</p>`;
   }
 })();
