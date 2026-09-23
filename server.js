@@ -150,7 +150,7 @@ app.get('/api/reminders', async (req, res) => {
 app.get('/api/summary/oil-grades', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT oil_grade AS name, COUNT(*) AS count
+      `SELECT oil_grade AS name, COUNT(*) AS count, COALESCE(SUM(oil_qty), 0) AS total_qty
        FROM service_records
        WHERE oil_grade IS NOT NULL AND oil_grade <> ''
        GROUP BY oil_grade

@@ -187,6 +187,35 @@ async function loadRecords(search){
   return res.json();
 }
 
+// ---------- WhatsApp message links ----------
+// Converts a locally-entered Sri Lankan number (e.g. "077 123 4567") into
+// the digits-only, country-code-prefixed format wa.me requires.
+function toWhatsAppNumber(phone){
+  if(!phone) return null;
+  let digits = phone.replace(/\D/g, "");
+  if(!digits) return null;
+  if(digits.startsWith("0")) digits = "94" + digits.slice(1);
+  else if(!digits.startsWith("94")) digits = "94" + digits;
+  return digits;
+}
+
+function buildWhatsAppLink(r, vehicle, compsText){
+  const waNumber = toWhatsAppNumber(r.customer_phone);
+  if(!waNumber) return null;
+  const message = [
+    `Hi ${r.customer_name || "there"}, this is Nandana Auto Electricals.`,
+    ``,
+    `Your vehicle ${r.plate}${vehicle !== "—" ? ` (${vehicle})` : ""} was serviced on ${toDDMMYYYY(r.service_date)}.`,
+    `Oil Grade: ${r.oil_grade || "—"}`,
+    `Components changed: ${compsText}`,
+    ``,
+    `Next expected service: ${toDDMMYYYY(r.next_service_date)} or ${(r.next_odometer||0).toLocaleString()} km, whichever comes first.`,
+    ``,
+    `Thank you for choosing us!`,
+  ].join("\n");
+  return `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+}
+
 function renderRecords(records){
   const list = $("recordsList");
   if(records.length === 0){
@@ -199,11 +228,19 @@ function renderRecords(records){
     if(r.comp_cabin_filter) comps.push("Cabin Filter");
     if(r.comp_engine_filter) comps.push("Engine Filter");
     const compHtml = comps.length ? comps.map(c=>`<span class="tag">${c}</span>`).join("") : `<span class="record-sub">No extra components changed</span>`;
+    const compsText = comps.length ? comps.join(", ") : "None";
     const vehicle = [r.vehicle_make, r.vehicle_model].filter(Boolean).join(" ") || "—";
+    const waLink = buildWhatsAppLink(r, vehicle, compsText);
+    const waButton = waLink
+      ? `<a class="waBtn" href="${waLink}" target="_blank" rel="noopener">WhatsApp</a>`
+      : `<span class="waBtn waBtn-disabled" title="No phone number on file">WhatsApp</span>`;
     return `<div class="record-card">
       <div class="record-card-top">
         <span class="record-plate">${r.plate||""}</span>
-        <button data-id="${r.id}" class="delRecord">Delete</button>
+        <div class="record-actions">
+          ${waButton}
+          <button data-id="${r.id}" class="delRecord">Delete</button>
+        </div>
       </div>
       <div class="record-sub">${r.customer_name||"—"} &nbsp;·&nbsp; ${r.customer_phone||"—"} &nbsp;·&nbsp; ${vehicle}</div>
 
@@ -259,12 +296,16 @@ function renderSummary(entries){
     return;
   }
   const max = Math.max(...entries.map(e => Number(e.count)));
-  box.innerHTML = entries.map(e => `
+  box.innerHTML = entries.map(e => {
+    const count = Number(e.count);
+    const qty = Number(e.total_qty || 0);
+    return `
     <div class="bar-row">
-      <span>${e.name}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${(Number(e.count)/max*100).toFixed(0)}%"></div></div>
-      <span>${e.count}</span>
-    </div>`).join("");
+      <span class="bar-name">${e.name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${(count/max*100).toFixed(0)}%"></div></div>
+      <span class="bar-stats">${count} service${count===1?"":"s"} &nbsp;·&nbsp; ${qty.toFixed(1)} L used</span>
+    </div>`;
+  }).join("");
 }
 
 async function refreshSummary(){
