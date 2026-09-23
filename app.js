@@ -2,7 +2,11 @@ const $ = id => document.getElementById(id);
 
 function toDDMMYYYY(iso){
   if(!iso) return "—";
-  const [y,m,d] = iso.split("-");
+  // Postgres DATE columns come back from the API as a full ISO timestamp
+  // (e.g. "2026-09-23T00:00:00.000Z"), so strip any time part first.
+  const datePart = String(iso).split("T")[0];
+  const [y,m,d] = datePart.split("-");
+  if(!y || !m || !d) return "—";
   return `${d}-${m}-${y}`;
 }
 
@@ -20,6 +24,31 @@ function applyTheme(theme){
 $("themeToggle").addEventListener("click", () => {
   const current = document.documentElement.getAttribute("data-theme");
   applyTheme(current === "dark" ? "light" : "dark");
+});
+
+// ---------- PWA: service worker + install prompt ----------
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  });
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  $("installBtn").classList.remove("hidden");
+});
+$("installBtn").addEventListener("click", async () => {
+  if(!deferredInstallPrompt) return;
+  $("installBtn").classList.add("hidden");
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+});
+window.addEventListener("appinstalled", () => {
+  $("installBtn").classList.add("hidden");
+  deferredInstallPrompt = null;
 });
 
 // ---------- Connection status ----------
@@ -45,14 +74,19 @@ setInterval(checkStatus, 30000);
 // ---------- Tabs ----------
 function showTab(tab){
   $("panelEntry").classList.toggle("hidden", tab !== "entry");
+  $("panelRecords").classList.toggle("hidden", tab !== "records");
   $("panelReminders").classList.toggle("hidden", tab !== "reminders");
   $("panelSettings").classList.toggle("hidden", tab !== "settings");
   $("tabBtnEntry").classList.toggle("active", tab === "entry");
+  $("tabBtnRecords").classList.toggle("active", tab === "records");
   $("tabBtnReminders").classList.toggle("active", tab === "reminders");
   $("tabBtnSettings").classList.toggle("active", tab === "settings");
+  if(tab === "records") refreshRecords();
   if(tab === "reminders") refreshReminders();
+  if(tab === "settings") refreshSummary();
 }
 $("tabBtnEntry").addEventListener("click", () => showTab("entry"));
+$("tabBtnRecords").addEventListener("click", () => showTab("records"));
 $("tabBtnReminders").addEventListener("click", () => showTab("reminders"));
 $("tabBtnSettings").addEventListener("click", () => showTab("settings"));
 
@@ -66,12 +100,14 @@ function updatePreview(){
   const sd = $("serviceDate").value;
   const odo = parseFloat($("odometer").value);
   if(!sd || isNaN(odo)){
-    $("preview").textContent = "Next service date and odometer will appear here once you enter a service date and odometer reading.";
+    $("nextDateValue").textContent = "—";
+    $("nextOdoValue").textContent = "—";
     return;
   }
   const nextDate = addMonths(sd, 6);
   const nextOdo = odo + 5000;
-  $("preview").innerHTML = `Next expected service: <b>${toDDMMYYYY(nextDate)}</b> &nbsp;|&nbsp; Next expected odometer: <b>${nextOdo.toLocaleString()} km</b>`;
+  $("nextDateValue").textContent = toDDMMYYYY(nextDate);
+  $("nextOdoValue").textContent = `${nextOdo.toLocaleString()} km`;
 }
 $("serviceDate").addEventListener("input", updatePreview);
 $("odometer").addEventListener("input", updatePreview);
@@ -143,7 +179,7 @@ wireAdd("addGradeBtn", "newGrade", "oil_grades", refreshGrades);
 wireAdd("addTechnicianBtn", "newTechnician", "technicians", refreshTechnicians);
 wireAdd("addMakeBtn", "newMake", "vehicle_makes", refreshMakes);
 
-// ---------- Records table + search ----------
+// ---------- Service records (Records tab) ----------
 async function loadRecords(search){
   const url = search ? `/api/records?search=${encodeURIComponent(search)}` : "/api/records";
   const res = await fetch(url);
@@ -183,28 +219,26 @@ function renderRecords(records){
   body.querySelectorAll(".delRecord").forEach(btn => {
     btn.addEventListener("click", async () => {
       await fetch(`/api/records/${btn.dataset.id}`, { method: "DELETE" });
-      await refreshRecordsAndSummary();
+      await refreshRecords();
+      await refreshSummary();
       await refreshReminders();
     });
   });
 }
 
-async function refreshRecordsAndSummary(){
-  const search = $("plateSearch").value.trim();
-  const [records, summary] = await Promise.all([
-    loadRecords(search),
-    fetch("/api/summary/oil-grades").then(r => r.json()),
-  ]);
+async function refreshRecords(){
+  const search = $("recordsSearch").value.trim();
+  const records = await loadRecords(search);
   renderRecords(records);
-  renderSummary(summary);
 }
 
 let searchDebounce;
-$("plateSearch").addEventListener("input", () => {
+$("recordsSearch").addEventListener("input", () => {
   clearTimeout(searchDebounce);
-  searchDebounce = setTimeout(refreshRecordsAndSummary, 250);
+  searchDebounce = setTimeout(refreshRecords, 250);
 });
 
+// ---------- Usage summary (Settings tab) ----------
 function renderSummary(entries){
   const box = $("summaryBars");
   if(!entries || entries.length === 0){
@@ -220,11 +254,17 @@ function renderSummary(entries){
     </div>`).join("");
 }
 
+async function refreshSummary(){
+  const summary = await fetch("/api/summary/oil-grades").then(r => r.json());
+  renderSummary(summary);
+}
+
 // ---------- Reminders ----------
 function daysBetween(iso){
   const today = new Date();
   today.setHours(0,0,0,0);
-  const target = new Date(iso + "T00:00:00");
+  const datePart = String(iso).split("T")[0];
+  const target = new Date(datePart + "T00:00:00");
   return Math.round((target - today) / 86400000);
 }
 
@@ -307,7 +347,8 @@ $("saveBtn").addEventListener("click", async () => {
     $("compCabinFilter").checked = false;
     $("compEngineFilter").checked = false;
     updatePreview();
-    await refreshRecordsAndSummary();
+    await refreshRecords();
+    await refreshSummary();
     await refreshReminders();
     setTimeout(() => $("saveStatus").textContent = "", 2500);
   }catch(e){
@@ -319,7 +360,8 @@ $("saveBtn").addEventListener("click", async () => {
 (async function init(){
   try{
     await Promise.all([refreshGrades(), refreshTechnicians(), refreshMakes()]);
-    await refreshRecordsAndSummary();
+    await refreshRecords();
+    await refreshSummary();
     await refreshReminders();
   }catch(e){
     $("recordsBody").innerHTML = `<tr><td colspan="13" class="empty">Could not load data from the server.</td></tr>`;

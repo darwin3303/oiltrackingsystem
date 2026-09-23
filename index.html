@@ -2,9 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Oil Change Tracker — Nandana Auto Electricals</title>
 <link rel="stylesheet" href="style.css">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e3350">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Oil Tracker">
 </head>
 <body>
 <header>
@@ -17,22 +26,20 @@
   </div>
   <div class="header-right">
     <span id="statusPill" class="status-pill status-checking">Checking connection…</span>
+    <button id="installBtn" class="icon-btn hidden" title="Install this app">⬇ Install</button>
     <button id="themeToggle" class="icon-btn" title="Toggle light / dark mode">🌙</button>
   </div>
 </header>
 
 <nav>
   <button id="tabBtnEntry" class="active">Service Entry</button>
+  <button id="tabBtnRecords">Service Records</button>
   <button id="tabBtnReminders">Reminders <span id="reminderCount" class="count-badge hidden">0</span></button>
   <button id="tabBtnSettings">Settings &amp; Summary</button>
 </nav>
 
 <main>
   <section id="panelEntry" class="panel">
-    <h2>Find a Vehicle</h2>
-    <p class="sub">Search saved records by number plate.</p>
-    <input type="text" id="plateSearch" placeholder="Search by number plate, e.g. CAB-1234">
-
     <h2>New Service Record</h2>
     <p class="sub">Next service date and odometer are calculated automatically.</p>
 
@@ -40,26 +47,49 @@
       <div>
         <label>Vehicle Number Plate</label>
         <input type="text" id="plate" placeholder="e.g. WP CAB-1234">
-        <label>Customer Name</label>
-        <input type="text" id="customerName" placeholder="Customer full name">
-        <label>Customer Phone Number</label>
-        <input type="tel" id="customerPhone" placeholder="e.g. 077 123 4567">
-        <label>Vehicle Make</label>
-        <select id="vehicleMake"><option value="">Loading makes…</option></select>
-        <label>Vehicle Model</label>
-        <input type="text" id="vehicleModel" placeholder="e.g. Vitz, Alto, Wagon R">
       </div>
       <div>
         <label>Oil Service Date</label>
         <input type="date" id="serviceDate">
+      </div>
+
+      <div>
+        <label>Customer Name</label>
+        <input type="text" id="customerName" placeholder="Customer full name">
+      </div>
+      <div>
+        <label>Customer Phone Number</label>
+        <input type="tel" id="customerPhone" placeholder="e.g. 077 123 4567">
+      </div>
+
+      <div>
         <label>Odometer Reading at Service (km)</label>
         <input type="number" id="odometer" min="0" placeholder="e.g. 45000">
+      </div>
+      <div>
         <label>Oil Grade Used</label>
         <select id="oilGrade"><option value="">Loading grades…</option></select>
+      </div>
+
+      <div>
         <label>Quantity of Oil Used (litres)</label>
         <input type="number" id="oilQty" min="0" step="0.1" placeholder="e.g. 3.5">
+      </div>
+      <div>
+        <label>Vehicle Make</label>
+        <select id="vehicleMake"><option value="">Loading makes…</option></select>
+      </div>
+
+      <div>
+        <label>Vehicle Model</label>
+        <input type="text" id="vehicleModel" placeholder="e.g. Vitz, Alto, Wagon R">
+      </div>
+      <div>
         <label>Technician</label>
         <select id="technician"><option value="">Loading technicians…</option></select>
+      </div>
+
+      <div class="full-width">
         <label>Other Components Changed</label>
         <div class="checks">
           <label><input type="checkbox" id="compOilFilter"> Oil Filter</label>
@@ -69,11 +99,25 @@
       </div>
     </div>
 
-    <div class="preview" id="preview">Next service date and odometer will appear here once you enter a service date and odometer reading.</div>
+    <div class="next-service-card" id="preview">
+      <div class="next-stat">
+        <span class="next-label">Next Expected Service</span>
+        <span class="next-value" id="nextDateValue">—</span>
+      </div>
+      <div class="next-stat">
+        <span class="next-label">Next Expected Odometer</span>
+        <span class="next-value" id="nextOdoValue">—</span>
+      </div>
+    </div>
 
     <button class="btn" id="saveBtn">Save Service Record</button>
     <span id="saveStatus" class="note"></span>
+  </section>
 
+  <section id="panelRecords" class="panel hidden">
+    <h2>Service Records</h2>
+    <p class="sub">Search and browse all saved service records.</p>
+    <input type="text" id="recordsSearch" placeholder="Search by number plate, e.g. CAB-1234">
     <div class="tablewrap">
       <table>
         <thead>
