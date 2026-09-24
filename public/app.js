@@ -624,7 +624,6 @@ $("saveBtn").addEventListener("click", async () => {
   };
 
   $("saveStatus").textContent = "Saving…";
-  $("saveWhatsAppBox").innerHTML = "";
   try{
     const res = await fetch("/api/records", {
       method: "POST",
@@ -632,12 +631,7 @@ $("saveBtn").addEventListener("click", async () => {
       body: JSON.stringify(payload),
     });
     if(!res.ok) throw new Error("save failed");
-    const saved = await res.json();
     $("saveStatus").textContent = "Saved.";
-    const waLink = buildWhatsAppLink(saved, compsFor(saved));
-    $("saveWhatsAppBox").innerHTML = waLink
-      ? `<a class="btn secondary waSendBtn" href="${waLink}" target="_blank" rel="noopener">📱 Send WhatsApp Confirmation to ${saved.customer_name || "customer"}</a>`
-      : `<span class="note">No phone number on file — add one to send a WhatsApp confirmation.</span>`;
     ["plate","customerName","customerPhone","vehicleModel","serviceDate","odometer","oilQty"].forEach(id => $(id).value = "");
     $("compOilFilter").checked = false;
     $("compCabinFilter").checked = false;

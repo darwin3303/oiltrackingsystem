@@ -169,7 +169,6 @@ input[type=text], input[type=number], input[type=date], input[type=tel], select{
   cursor:not-allowed; pointer-events:none; opacity:0.7;
 }
 .waBtn-sm{padding:4px 10px; font-size:0.78rem;}
-.waSendBtn{display:inline-flex; margin-top:10px; text-decoration:none;}
 .reminder-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 .record-sub{font-size:0.85rem; color:var(--muted); margin-top:4px;}
 .record-grid{
