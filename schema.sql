@@ -7,8 +7,15 @@ CREATE TABLE IF NOT EXISTS oil_grades (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Automatic Transmission Fluid / CVT Fluid grades.
-CREATE TABLE IF NOT EXISTS atf_cvt_grades (
+-- Automatic Transmission Fluid (ATF) grades.
+CREATE TABLE IF NOT EXISTS atf_grades (
+  id SERIAL PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- CVT Fluid grades.
+CREATE TABLE IF NOT EXISTS cvt_grades (
   id SERIAL PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
@@ -57,6 +64,22 @@ CREATE TABLE IF NOT EXISTS service_records (
 -- If service_records already existed from an earlier version, this adds
 -- the new column without touching your existing rows.
 ALTER TABLE service_records ADD COLUMN IF NOT EXISTS oil_type TEXT;
+
+-- If you're updating from the version that had a combined ATF/CVT
+-- category, this moves any grades and records already saved under it
+-- into the new ATF table (a reasonable default — move them to CVT
+-- manually afterwards if any were actually CVT fluid) and then removes
+-- the old table so it doesn't linger unused.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'atf_cvt_grades') THEN
+    INSERT INTO atf_grades (name)
+      SELECT name FROM atf_cvt_grades
+      ON CONFLICT (name) DO NOTHING;
+    UPDATE service_records SET oil_type = 'ATF' WHERE oil_type = 'ATF/CVT Fluid';
+    DROP TABLE atf_cvt_grades;
+  END IF;
+END $$;
 
 -- Speeds up the number-plate search box and vehicle history lookups.
 CREATE INDEX IF NOT EXISTS idx_service_records_plate ON service_records (plate);

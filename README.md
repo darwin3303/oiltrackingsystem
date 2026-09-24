@@ -60,9 +60,12 @@ redeploys automatically.
 ## Updating an existing database (oil type + new grade lists)
 
 If you already ran an earlier version of `schema.sql`, just re-run the
-**entire** file again in Neon's SQL Editor — every statement uses
-`IF NOT EXISTS`, so it only adds what's missing (the `oil_type` column and
-the two new grade tables) and leaves your existing records untouched.
+**entire** file again in Neon's SQL Editor. Every statement uses
+`IF NOT EXISTS`, so it only adds what's missing. If you had already applied
+the combined "ATF/CVT Fluid" version, this run also automatically moves any
+grades and records saved under it into the new ATF table (a reasonable
+default — move any that were actually CVT fluid over manually afterwards)
+and drops the now-unused `atf_cvt_grades` table.
 
 ## Project structure
 
@@ -88,6 +91,6 @@ oil-app/
 | GET    | /api/records/by-plate/:plate | Full history for one exact vehicle        |
 | POST   | /api/records                | Create a record (next date/odometer auto)  |
 | DELETE | /api/records/:id            | Delete a record                            |
-| GET/POST/DELETE | /api/oil_grades, /api/atf_cvt_grades, /api/manual_transmission_grades, /api/technicians, /api/vehicle_makes | Manage dropdown lists |
-| GET    | /api/summary/oil-grades     | Usage counts per oil grade                 |
+| GET/POST/DELETE | /api/oil_grades, /api/atf_grades, /api/cvt_grades, /api/manual_transmission_grades, /api/technicians, /api/vehicle_makes | Manage dropdown lists |
+| GET    | /api/summary/oil-grades     | Usage counts per grade, grouped by oil type |
 | GET    | /api/reminders               | Vehicles due within 7 days or overdue      |

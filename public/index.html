@@ -71,7 +71,8 @@
         <label>Oil Type</label>
         <select id="oilType">
           <option value="Engine Oil">Engine Oil</option>
-          <option value="ATF/CVT Fluid">Automatic Transmission Fluid / CVT Fluid</option>
+          <option value="ATF">Automatic Transmission Fluid (ATF)</option>
+          <option value="CVT Fluid">CVT Fluid</option>
           <option value="Manual Transmission Oil">Manual Transmission Oil</option>
         </select>
       </div>
@@ -152,13 +153,23 @@
 
     <hr class="sep">
 
-    <h2>Automatic Transmission Fluid / CVT Fluid Grades</h2>
-    <p class="sub">Manage the grades offered when Oil Type is ATF/CVT Fluid.</p>
+    <h2>Automatic Transmission Fluid (ATF) Grades</h2>
+    <p class="sub">Manage the grades offered when Oil Type is ATF.</p>
     <div class="addrow">
-      <input type="text" id="newAtfGrade" placeholder="e.g. Dexron VI, CVTF-J1">
+      <input type="text" id="newAtfGrade" placeholder="e.g. Dexron VI, ATF WS">
       <button class="btn secondary" id="addAtfGradeBtn">Add Grade</button>
     </div>
     <ul class="itemlist" id="atfGradeList"></ul>
+
+    <hr class="sep">
+
+    <h2>CVT Fluid Grades</h2>
+    <p class="sub">Manage the grades offered when Oil Type is CVT Fluid.</p>
+    <div class="addrow">
+      <input type="text" id="newCvtGrade" placeholder="e.g. CVTF-J1, NS-2">
+      <button class="btn secondary" id="addCvtGradeBtn">Add Grade</button>
+    </div>
+    <ul class="itemlist" id="cvtGradeList"></ul>
 
     <hr class="sep">
 
@@ -193,8 +204,8 @@
     <hr class="sep">
 
     <h2>Usage Summary</h2>
-    <p class="sub">Which oil grades are used most, and the total litres used per grade, across all saved records.</p>
-    <div id="summaryBars"><p class="empty">No records yet.</p></div>
+    <p class="sub">Which grades are used most, and total litres used, broken down by oil type.</p>
+    <div id="summarySections"><p class="empty">No records yet.</p></div>
   </section>
 </main>
 

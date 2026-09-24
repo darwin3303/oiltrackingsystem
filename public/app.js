@@ -189,10 +189,16 @@ async function refreshGrades(){
   if($("oilType").value === "Engine Oil") fillSelect($("oilGrade"), grades, "Add a grade in Settings first");
 }
 async function refreshAtfGrades(){
-  const grades = await loadList("atf_cvt_grades");
+  const grades = await loadList("atf_grades");
   window.__atfGrades = grades;
-  renderItemList($("atfGradeList"), grades, "atf_cvt_grades", "No ATF/CVT grades added yet.");
-  if($("oilType").value === "ATF/CVT Fluid") fillSelect($("oilGrade"), grades, "Add a grade in Settings first");
+  renderItemList($("atfGradeList"), grades, "atf_grades", "No ATF grades added yet.");
+  if($("oilType").value === "ATF") fillSelect($("oilGrade"), grades, "Add a grade in Settings first");
+}
+async function refreshCvtGrades(){
+  const grades = await loadList("cvt_grades");
+  window.__cvtGrades = grades;
+  renderItemList($("cvtGradeList"), grades, "cvt_grades", "No CVT fluid grades added yet.");
+  if($("oilType").value === "CVT Fluid") fillSelect($("oilGrade"), grades, "Add a grade in Settings first");
 }
 async function refreshManualGrades(){
   const grades = await loadList("manual_transmission_grades");
@@ -202,7 +208,8 @@ async function refreshManualGrades(){
 }
 function gradesForCurrentOilType(){
   const type = $("oilType").value;
-  if(type === "ATF/CVT Fluid") return window.__atfGrades || [];
+  if(type === "ATF") return window.__atfGrades || [];
+  if(type === "CVT Fluid") return window.__cvtGrades || [];
   if(type === "Manual Transmission Oil") return window.__manualGrades || [];
   return window.__engineGrades || [];
 }
@@ -224,7 +231,7 @@ document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".delItem");
   if(!btn) return;
   await fetch(`/api/${btn.dataset.endpoint}/${btn.dataset.id}`, { method: "DELETE" });
-  await Promise.all([refreshGrades(), refreshAtfGrades(), refreshManualGrades(), refreshTechnicians(), refreshMakes()]);
+  await Promise.all([refreshGrades(), refreshAtfGrades(), refreshCvtGrades(), refreshManualGrades(), refreshTechnicians(), refreshMakes()]);
 });
 
 function wireAdd(btnId, inputId, endpoint, refreshFn){
@@ -241,7 +248,8 @@ function wireAdd(btnId, inputId, endpoint, refreshFn){
   });
 }
 wireAdd("addGradeBtn", "newGrade", "oil_grades", refreshGrades);
-wireAdd("addAtfGradeBtn", "newAtfGrade", "atf_cvt_grades", refreshAtfGrades);
+wireAdd("addAtfGradeBtn", "newAtfGrade", "atf_grades", refreshAtfGrades);
+wireAdd("addCvtGradeBtn", "newCvtGrade", "cvt_grades", refreshCvtGrades);
 wireAdd("addManualGradeBtn", "newManualGrade", "manual_transmission_grades", refreshManualGrades);
 wireAdd("addTechnicianBtn", "newTechnician", "technicians", refreshTechnicians);
 wireAdd("addMakeBtn", "newMake", "vehicle_makes", refreshMakes);
@@ -413,22 +421,52 @@ $("recordsSearch").addEventListener("input", () => {
   searchDebounce = setTimeout(refreshRecords, 250);
 });
 
-// ---------- Usage summary (Settings tab) ----------
+// ---------- Usage summary (Settings tab) — one sector per oil type ----------
+const OIL_TYPE_ORDER = ["Engine Oil", "ATF", "CVT Fluid", "Manual Transmission Oil"];
+const OIL_TYPE_LABELS = {
+  "Engine Oil": "Engine Oil",
+  "ATF": "Automatic Transmission Fluid (ATF)",
+  "CVT Fluid": "CVT Fluid",
+  "Manual Transmission Oil": "Manual Transmission Oil",
+};
+
 function renderSummary(entries){
-  const box = $("summaryBars");
+  const box = $("summarySections");
   if(!entries || entries.length === 0){
     box.innerHTML = `<p class="empty">No oil grade data yet.</p>`;
     return;
   }
-  const max = Math.max(...entries.map(e => Number(e.count)));
-  box.innerHTML = entries.map(e => {
-    const count = Number(e.count);
-    const qty = Number(e.total_qty || 0);
-    return `
-    <div class="bar-row">
-      <span class="bar-name">${e.name}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${(count/max*100).toFixed(0)}%"></div></div>
-      <span class="bar-stats">${count} service${count===1?"":"s"} &nbsp;·&nbsp; ${qty.toFixed(1)} L used</span>
+
+  const byType = {};
+  entries.forEach(e => {
+    const type = e.oil_type || "Engine Oil";
+    if(!byType[type]) byType[type] = [];
+    byType[type].push(e);
+  });
+
+  // Known types first, in a fixed order; anything unexpected (e.g. old
+  // data) is appended afterwards under its own label.
+  const orderedTypes = [
+    ...OIL_TYPE_ORDER.filter(t => byType[t]),
+    ...Object.keys(byType).filter(t => !OIL_TYPE_ORDER.includes(t)),
+  ];
+
+  box.innerHTML = orderedTypes.map(type => {
+    const rows = byType[type];
+    const max = Math.max(...rows.map(e => Number(e.count)));
+    const bars = rows.map(e => {
+      const count = Number(e.count);
+      const qty = Number(e.total_qty || 0);
+      return `
+      <div class="bar-row">
+        <span class="bar-name">${e.name}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${(count/max*100).toFixed(0)}%"></div></div>
+        <span class="bar-stats">${count} service${count===1?"":"s"} &nbsp;·&nbsp; ${qty.toFixed(1)} L used</span>
+      </div>`;
+    }).join("");
+    return `<div class="summary-sector">
+      <h3 class="summary-sector-title">${OIL_TYPE_LABELS[type] || type}</h3>
+      ${bars}
     </div>`;
   }).join("");
 }
@@ -557,7 +595,7 @@ $("saveBtn").addEventListener("click", async () => {
 // ---------- Init ----------
 (async function init(){
   try{
-    await Promise.all([refreshGrades(), refreshAtfGrades(), refreshManualGrades(), refreshTechnicians(), refreshMakes()]);
+    await Promise.all([refreshGrades(), refreshAtfGrades(), refreshCvtGrades(), refreshManualGrades(), refreshTechnicians(), refreshMakes()]);
     await refreshRecords();
     await refreshSummary();
     await refreshReminders();

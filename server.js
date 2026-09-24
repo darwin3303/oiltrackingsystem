@@ -69,7 +69,8 @@ function listRoutes(table) {
 }
 
 listRoutes('oil_grades');
-listRoutes('atf_cvt_grades');
+listRoutes('atf_grades');
+listRoutes('cvt_grades');
 listRoutes('manual_transmission_grades');
 listRoutes('technicians');
 listRoutes('vehicle_makes');
@@ -162,15 +163,16 @@ app.get('/api/reminders', async (req, res) => {
   }
 });
 
-// ---------- Summary: oil grade usage counts ----------
+// ---------- Summary: usage counts per oil grade, broken down by oil type ----------
 app.get('/api/summary/oil-grades', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT oil_grade AS name, COUNT(*) AS count, COALESCE(SUM(oil_qty), 0) AS total_qty
+      `SELECT COALESCE(oil_type, 'Engine Oil') AS oil_type, oil_grade AS name,
+              COUNT(*) AS count, COALESCE(SUM(oil_qty), 0) AS total_qty
        FROM service_records
        WHERE oil_grade IS NOT NULL AND oil_grade <> ''
-       GROUP BY oil_grade
-       ORDER BY count DESC`
+       GROUP BY COALESCE(oil_type, 'Engine Oil'), oil_grade
+       ORDER BY oil_type, count DESC`
     );
     res.json(rows);
   } catch (err) {
