@@ -47,6 +47,7 @@
       <div>
         <label>Vehicle Number Plate</label>
         <input type="text" id="plate" placeholder="e.g. WP CAB-1234">
+        <div id="plateHistoryBox" class="plate-history hidden"></div>
       </div>
       <div>
         <label>Oil Service Date</label>
@@ -66,6 +67,15 @@
         <label>Odometer Reading at Service (km)</label>
         <input type="number" id="odometer" min="0" placeholder="e.g. 45000">
       </div>
+      <div>
+        <label>Oil Type</label>
+        <select id="oilType">
+          <option value="Engine Oil">Engine Oil</option>
+          <option value="ATF/CVT Fluid">Automatic Transmission Fluid / CVT Fluid</option>
+          <option value="Manual Transmission Oil">Manual Transmission Oil</option>
+        </select>
+      </div>
+
       <div>
         <label>Oil Grade Used</label>
         <select id="oilGrade"><option value="">Loading grades…</option></select>
@@ -132,13 +142,33 @@
   </section>
 
   <section id="panelSettings" class="panel hidden">
-    <h2>Oil Grades</h2>
-    <p class="sub">Manage the grades that appear in the Service Entry dropdown.</p>
+    <h2>Engine Oil Grades</h2>
+    <p class="sub">Manage the grades that appear in the Service Entry dropdown when Oil Type is Engine Oil.</p>
     <div class="addrow">
       <input type="text" id="newGrade" placeholder="e.g. 5W-30 Fully Synthetic">
       <button class="btn secondary" id="addGradeBtn">Add Grade</button>
     </div>
     <ul class="itemlist" id="gradeList"></ul>
+
+    <hr class="sep">
+
+    <h2>Automatic Transmission Fluid / CVT Fluid Grades</h2>
+    <p class="sub">Manage the grades offered when Oil Type is ATF/CVT Fluid.</p>
+    <div class="addrow">
+      <input type="text" id="newAtfGrade" placeholder="e.g. Dexron VI, CVTF-J1">
+      <button class="btn secondary" id="addAtfGradeBtn">Add Grade</button>
+    </div>
+    <ul class="itemlist" id="atfGradeList"></ul>
+
+    <hr class="sep">
+
+    <h2>Manual Transmission Oil Grades</h2>
+    <p class="sub">Manage the grades offered when Oil Type is Manual Transmission Oil.</p>
+    <div class="addrow">
+      <input type="text" id="newManualGrade" placeholder="e.g. 75W-90 GL-4">
+      <button class="btn secondary" id="addManualGradeBtn">Add Grade</button>
+    </div>
+    <ul class="itemlist" id="manualGradeList"></ul>
 
     <hr class="sep">
 

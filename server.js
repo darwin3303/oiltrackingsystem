@@ -69,6 +69,8 @@ function listRoutes(table) {
 }
 
 listRoutes('oil_grades');
+listRoutes('atf_cvt_grades');
+listRoutes('manual_transmission_grades');
 listRoutes('technicians');
 listRoutes('vehicle_makes');
 
@@ -93,6 +95,20 @@ app.get('/api/records', async (req, res) => {
   }
 });
 
+// GET /api/records/by-plate/ABC-1234 -> full service history for one exact vehicle,
+// newest first. Used for the "returning customer" history views.
+app.get('/api/records/by-plate/:plate', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM service_records WHERE plate ILIKE $1 ORDER BY service_date DESC, id DESC`,
+      [req.params.plate.trim()]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/records', async (req, res) => {
   const r = req.body;
   if (!r.plate || !r.service_date || r.odometer === undefined || r.odometer === null) {
@@ -104,15 +120,15 @@ app.post('/api/records', async (req, res) => {
     const { rows } = await pool.query(
       `INSERT INTO service_records
         (plate, customer_name, customer_phone, vehicle_make, vehicle_model,
-         service_date, odometer, oil_grade, oil_qty, technician,
+         service_date, odometer, oil_type, oil_grade, oil_qty, technician,
          comp_oil_filter, comp_cabin_filter, comp_engine_filter,
          next_service_date, next_odometer)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        RETURNING *`,
       [
         r.plate, r.customer_name || null, r.customer_phone || null,
         r.vehicle_make || null, r.vehicle_model || null,
-        r.service_date, r.odometer, r.oil_grade || null, r.oil_qty ?? null, r.technician || null,
+        r.service_date, r.odometer, r.oil_type || null, r.oil_grade || null, r.oil_qty ?? null, r.technician || null,
         !!r.comp_oil_filter, !!r.comp_cabin_filter, !!r.comp_engine_filter,
         nextServiceDate, nextOdometer,
       ]

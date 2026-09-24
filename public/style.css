@@ -111,6 +111,33 @@ input[type=text], input[type=number], input[type=date], input[type=tel], select{
 .record-card-top{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
 .record-plate{font-size:1.2rem; font-weight:800; letter-spacing:0.01em; color:var(--text);}
 .record-actions{display:flex; gap:8px; flex-wrap:wrap;}
+.historyBtn{
+  border:1px solid var(--border); background:none; color:var(--text);
+  border-radius:8px; padding:6px 12px; font-size:0.85rem; font-weight:600; cursor:pointer;
+}
+.historyBtn:hover{background:var(--bg);}
+.plate-history{
+  margin-top:8px; padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+  background:var(--bg); font-size:0.82rem;
+}
+.plate-history.hidden{display:none;}
+.plate-history-title{font-weight:700; margin-bottom:6px; color:var(--text);}
+.plate-history-item{
+  padding:6px 0; border-top:1px dashed var(--border); display:flex; justify-content:space-between;
+  gap:10px; flex-wrap:wrap; color:var(--muted);
+}
+.plate-history-item:first-of-type{border-top:none;}
+.plate-history-item b{color:var(--text); font-weight:600;}
+.record-history{
+  margin-top:14px; padding-top:14px; border-top:1px dashed var(--border);
+  display:flex; flex-direction:column; gap:8px;
+}
+.record-history.hidden{display:none;}
+.record-history-item{
+  padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--bg);
+  font-size:0.85rem; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
+}
+.record-history-item b{color:var(--text);}
 .waBtn{
   display:inline-flex; align-items:center; gap:6px; border:1px solid #25D366;
   background:#25D366; color:#fff; border-radius:8px; padding:6px 13px;

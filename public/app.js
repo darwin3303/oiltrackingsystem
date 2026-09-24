@@ -121,6 +121,40 @@ function updatePreview(){
 $("serviceDate").addEventListener("input", updatePreview);
 $("odometer").addEventListener("input", updatePreview);
 
+// ---------- Returning customer: previous service history for the plate being entered ----------
+let plateHistoryDebounce;
+async function checkPlateHistory(){
+  const plate = $("plate").value.trim();
+  const box = $("plateHistoryBox");
+  if(!plate){
+    box.classList.add("hidden");
+    box.innerHTML = "";
+    return;
+  }
+  try{
+    const res = await fetch(`/api/records/by-plate/${encodeURIComponent(plate)}`);
+    const records = await res.json();
+    if(!records.length){
+      box.classList.add("hidden");
+      box.innerHTML = "";
+      return;
+    }
+    box.innerHTML = `<div class="plate-history-title">Returning vehicle — ${records.length} previous service${records.length===1?"":"s"} on file</div>`
+      + records.slice(0,5).map(r => `
+        <div class="plate-history-item">
+          <span><b>${toDDMMYYYY(r.service_date)}</b> · ${(r.odometer||0).toLocaleString()} km · ${r.oil_type || "Engine Oil"}${r.oil_grade ? " ("+r.oil_grade+")" : ""}</span>
+          <span>${r.technician || "—"}</span>
+        </div>`).join("");
+    box.classList.remove("hidden");
+  }catch(e){
+    box.classList.add("hidden");
+  }
+}
+$("plate").addEventListener("input", () => {
+  clearTimeout(plateHistoryDebounce);
+  plateHistoryDebounce = setTimeout(checkPlateHistory, 400);
+});
+
 // ---------- Lookup lists (oil grades, technicians, vehicle makes) ----------
 async function loadList(endpoint){
   const res = await fetch(`/api/${endpoint}`);
@@ -150,9 +184,31 @@ function renderItemList(ul, items, endpoint, emptyText){
 
 async function refreshGrades(){
   const grades = await loadList("oil_grades");
-  fillSelect($("oilGrade"), grades, "Add a grade in Settings first");
+  window.__engineGrades = grades;
   renderItemList($("gradeList"), grades, "oil_grades", "No oil grades added yet.");
+  if($("oilType").value === "Engine Oil") fillSelect($("oilGrade"), grades, "Add a grade in Settings first");
 }
+async function refreshAtfGrades(){
+  const grades = await loadList("atf_cvt_grades");
+  window.__atfGrades = grades;
+  renderItemList($("atfGradeList"), grades, "atf_cvt_grades", "No ATF/CVT grades added yet.");
+  if($("oilType").value === "ATF/CVT Fluid") fillSelect($("oilGrade"), grades, "Add a grade in Settings first");
+}
+async function refreshManualGrades(){
+  const grades = await loadList("manual_transmission_grades");
+  window.__manualGrades = grades;
+  renderItemList($("manualGradeList"), grades, "manual_transmission_grades", "No manual transmission grades added yet.");
+  if($("oilType").value === "Manual Transmission Oil") fillSelect($("oilGrade"), grades, "Add a grade in Settings first");
+}
+function gradesForCurrentOilType(){
+  const type = $("oilType").value;
+  if(type === "ATF/CVT Fluid") return window.__atfGrades || [];
+  if(type === "Manual Transmission Oil") return window.__manualGrades || [];
+  return window.__engineGrades || [];
+}
+$("oilType").addEventListener("change", () => {
+  fillSelect($("oilGrade"), gradesForCurrentOilType(), "Add a grade in Settings first");
+});
 async function refreshTechnicians(){
   const technicians = await loadList("technicians");
   fillSelect($("technician"), technicians, "Add a technician in Settings first");
@@ -168,7 +224,7 @@ document.addEventListener("click", async (e) => {
   const btn = e.target.closest(".delItem");
   if(!btn) return;
   await fetch(`/api/${btn.dataset.endpoint}/${btn.dataset.id}`, { method: "DELETE" });
-  await Promise.all([refreshGrades(), refreshTechnicians(), refreshMakes()]);
+  await Promise.all([refreshGrades(), refreshAtfGrades(), refreshManualGrades(), refreshTechnicians(), refreshMakes()]);
 });
 
 function wireAdd(btnId, inputId, endpoint, refreshFn){
@@ -185,6 +241,8 @@ function wireAdd(btnId, inputId, endpoint, refreshFn){
   });
 }
 wireAdd("addGradeBtn", "newGrade", "oil_grades", refreshGrades);
+wireAdd("addAtfGradeBtn", "newAtfGrade", "atf_cvt_grades", refreshAtfGrades);
+wireAdd("addManualGradeBtn", "newManualGrade", "manual_transmission_grades", refreshManualGrades);
 wireAdd("addTechnicianBtn", "newTechnician", "technicians", refreshTechnicians);
 wireAdd("addMakeBtn", "newMake", "vehicle_makes", refreshMakes);
 
@@ -226,7 +284,7 @@ function buildWhatsAppLink(r, comps){
     ``,
     `Service Date: ${toDDMMYYYYSlash(r.service_date)}`,
     `Odometer Reading: ${(r.odometer||0).toLocaleString()} km`,
-    `Engine Oil Grade: ${r.oil_grade || "N/A"}`,
+    `${r.oil_type || "Engine Oil"} Grade: ${r.oil_grade || "N/A"}`,
     `Components Changed:`,
     componentLines,
     ``,
@@ -270,6 +328,7 @@ function renderRecords(records){
       <div class="record-card-top">
         <span class="record-plate">${r.plate||""}</span>
         <div class="record-actions">
+          <button class="historyBtn" data-plate="${r.plate||""}" data-id="${r.id}">History</button>
           ${waButton}
           <button data-id="${r.id}" class="delRecord">Delete</button>
         </div>
@@ -279,6 +338,7 @@ function renderRecords(records){
       <div class="record-grid">
         <div class="record-field"><span class="record-label">Service Date</span><span class="record-value">${toDDMMYYYY(r.service_date)}</span></div>
         <div class="record-field"><span class="record-label">Odometer</span><span class="record-value">${(r.odometer||0).toLocaleString()} km</span></div>
+        <div class="record-field"><span class="record-label">Oil Type</span><span class="record-value">${r.oil_type||"Engine Oil"}</span></div>
         <div class="record-field"><span class="record-label">Oil Grade</span><span class="record-value">${r.oil_grade||"—"}</span></div>
         <div class="record-field"><span class="record-label">Qty Used</span><span class="record-value">${r.oil_qty ?? "—"} L</span></div>
         <div class="record-field"><span class="record-label">Technician</span><span class="record-value">${r.technician||"—"}</span></div>
@@ -296,6 +356,8 @@ function renderRecords(records){
           <span class="record-next-value">${(r.next_odometer||0).toLocaleString()} km</span>
         </div>
       </div>
+
+      <div class="record-history hidden" id="history-${r.id}"></div>
     </div>`;
   }).join("");
   list.querySelectorAll(".delRecord").forEach(btn => {
@@ -304,6 +366,37 @@ function renderRecords(records){
       await refreshRecords();
       await refreshSummary();
       await refreshReminders();
+    });
+  });
+  list.querySelectorAll(".historyBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const box = $(`history-${btn.dataset.id}`);
+      const isHidden = box.classList.contains("hidden");
+      if(!isHidden){
+        box.classList.add("hidden");
+        return;
+      }
+      if(!box.dataset.loaded){
+        box.innerHTML = `<span class="empty">Loading history…</span>`;
+        box.classList.remove("hidden");
+        try{
+          const res = await fetch(`/api/records/by-plate/${encodeURIComponent(btn.dataset.plate)}`);
+          const all = await res.json();
+          const others = all.filter(x => String(x.id) !== String(btn.dataset.id));
+          box.innerHTML = others.length
+            ? others.map(o => `
+              <div class="record-history-item">
+                <span><b>${toDDMMYYYY(o.service_date)}</b> · ${(o.odometer||0).toLocaleString()} km · ${o.oil_type||"Engine Oil"}${o.oil_grade ? " ("+o.oil_grade+")" : ""}</span>
+                <span>${o.technician||"—"}</span>
+              </div>`).join("")
+            : `<span class="empty">No other service history for this vehicle.</span>`;
+          box.dataset.loaded = "1";
+        }catch(e){
+          box.innerHTML = `<span class="empty">Could not load history.</span>`;
+        }
+      } else {
+        box.classList.remove("hidden");
+      }
     });
   });
 }
@@ -425,6 +518,7 @@ $("saveBtn").addEventListener("click", async () => {
     vehicle_model: $("vehicleModel").value.trim(),
     service_date: serviceDate,
     odometer,
+    oil_type: $("oilType").value,
     oil_grade: $("oilGrade").value,
     oil_qty: $("oilQty").value ? parseFloat($("oilQty").value) : null,
     technician: $("technician").value,
@@ -446,6 +540,10 @@ $("saveBtn").addEventListener("click", async () => {
     $("compOilFilter").checked = false;
     $("compCabinFilter").checked = false;
     $("compEngineFilter").checked = false;
+    $("oilType").value = "Engine Oil";
+    fillSelect($("oilGrade"), gradesForCurrentOilType(), "Add a grade in Settings first");
+    $("plateHistoryBox").classList.add("hidden");
+    $("plateHistoryBox").innerHTML = "";
     updatePreview();
     await refreshRecords();
     await refreshSummary();
@@ -459,7 +557,7 @@ $("saveBtn").addEventListener("click", async () => {
 // ---------- Init ----------
 (async function init(){
   try{
-    await Promise.all([refreshGrades(), refreshTechnicians(), refreshMakes()]);
+    await Promise.all([refreshGrades(), refreshAtfGrades(), refreshManualGrades(), refreshTechnicians(), refreshMakes()]);
     await refreshRecords();
     await refreshSummary();
     await refreshReminders();

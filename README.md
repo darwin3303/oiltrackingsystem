@@ -55,9 +55,14 @@ Open http://localhost:3000 — you should see the app, with a green
 ## Updating later
 
 Any time you push a new commit to the connected branch, Render rebuilds and
-redeploys automatically. Schema changes (e.g. a new column) need to be run
-manually in Neon's SQL Editor — this project doesn't run migrations
-automatically.
+redeploys automatically.
+
+## Updating an existing database (oil type + new grade lists)
+
+If you already ran an earlier version of `schema.sql`, just re-run the
+**entire** file again in Neon's SQL Editor — every statement uses
+`IF NOT EXISTS`, so it only adds what's missing (the `oil_type` column and
+the two new grade tables) and leaves your existing records untouched.
 
 ## Project structure
 
@@ -65,7 +70,7 @@ automatically.
 oil-app/
 ├── server.js          Express app + REST API + Postgres queries
 ├── package.json
-├── schema.sql          Run once in Neon's SQL Editor
+├── schema.sql          Re-run any time in Neon's SQL Editor — safe to repeat
 ├── .env.example         Copy to .env for local development
 └── public/
     ├── index.html
@@ -80,8 +85,9 @@ oil-app/
 |--------|-----------------------------|--------------------------------------------|
 | GET    | /api/health                 | Used by the status pill                    |
 | GET    | /api/records?search=PLATE   | List records, optionally filtered by plate |
+| GET    | /api/records/by-plate/:plate | Full history for one exact vehicle        |
 | POST   | /api/records                | Create a record (next date/odometer auto)  |
 | DELETE | /api/records/:id            | Delete a record                            |
-| GET/POST/DELETE | /api/oil_grades, /api/technicians, /api/vehicle_makes | Manage dropdown lists |
+| GET/POST/DELETE | /api/oil_grades, /api/atf_cvt_grades, /api/manual_transmission_grades, /api/technicians, /api/vehicle_makes | Manage dropdown lists |
 | GET    | /api/summary/oil-grades     | Usage counts per oil grade                 |
 | GET    | /api/reminders               | Vehicles due within 7 days or overdue      |
