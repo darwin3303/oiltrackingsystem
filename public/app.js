@@ -212,45 +212,33 @@ function buildWhatsAppLink(r, comps){
   const waNumber = toWhatsAppNumber(r.customer_phone);
   if(!waNumber) return null;
 
-  // Emoji written as \uXXXX escapes (not literal characters) so the file
-  // stays plain ASCII — some editors/tools silently re-save multi-byte
-  // UTF-8 characters with a lossy encoding, which turns emoji into "?".
-  const WRENCH = "\ud83d\udd27";
-  const CALENDAR = "\ud83d\udcc5";
-  const CAR = "\ud83d\ude97";
-  const OIL_DRUM = "\ud83d\udee2\ufe0f";
-  const NUT_BOLT = "\ud83d\udd29";
-  const HEART = "\u2764\ufe0f";
-  const THUMBS_UP = "\ud83d\udc4d";
-  const STAR = "\u2b50";
-
   const greetingName = (r.customer_name && r.customer_name.trim()) || "Sir/Madam";
   const componentLines = comps.length
-    ? comps.map(c => `* ${c}`).join("\n")
-    : `* No additional components changed`;
+    ? comps.map(c => `- ${c}`).join("\n")
+    : `- No additional components changed`;
 
   const message = [
     `Dear ${greetingName},`,
     ``,
     `Thank you for choosing *Nandana Auto Electricals & Spare Parts* for your vehicle service.`,
     ``,
-    `${WRENCH} *Service Details*`,
+    `*Service Details*`,
     ``,
-    `${CALENDAR} Service Date: ${toDDMMYYYYSlash(r.service_date)}`,
-    `${CAR} Odometer Reading: ${(r.odometer||0).toLocaleString()} km`,
-    `${OIL_DRUM} Engine Oil Grade: ${r.oil_grade || "—"}`,
-    `${NUT_BOLT} Components Changed:`,
+    `Service Date: ${toDDMMYYYYSlash(r.service_date)}`,
+    `Odometer Reading: ${(r.odometer||0).toLocaleString()} km`,
+    `Engine Oil Grade: ${r.oil_grade || "N/A"}`,
+    `Components Changed:`,
     componentLines,
     ``,
-    `${CALENDAR} *Expected Next Service:* ${toDDMMYYYYSlash(r.next_service_date)} or ${(r.next_odometer||0).toLocaleString()} km`,
+    `*Expected Next Service:* ${toDDMMYYYYSlash(r.next_service_date)} or ${(r.next_odometer||0).toLocaleString()} km`,
     ``,
     `We recommend completing the next service on or before the above date or mileage to maintain the vehicle's performance and reliability.`,
     ``,
-    `We would also appreciate your continued support. ${HEART}`,
+    `We would also appreciate your continued support.`,
     ``,
-    `${THUMBS_UP} *Follow us on Facebook:* https://www.facebook.com/profile.php?id=61581431322976&mibextid=wwXIfr&mibextid=wwXIfr`,
+    `*Follow us on Facebook:* https://www.facebook.com/profile.php?id=61581431322976&mibextid=wwXIfr&mibextid=wwXIfr`,
     ``,
-    `${STAR} *Leave us a Google Review:* https://share.google/KbDKx8eHPUr5VBWz7`,
+    `*Leave us a Google Review:* https://share.google/KbDKx8eHPUr5VBWz7`,
     ``,
     `Thank you for choosing *Nandana Auto Electricals & Spare Parts*. We appreciate your trust and look forward to serving you again.`,
     ``,
