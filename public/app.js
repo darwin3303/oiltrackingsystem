@@ -139,12 +139,14 @@ async function checkPlateHistory(){
       box.innerHTML = "";
       return;
     }
-    box.innerHTML = `<div class="plate-history-title">Returning vehicle — ${records.length} previous service${records.length===1?"":"s"} on file</div>`
-      + records.slice(0,5).map(r => `
-        <div class="plate-history-item">
-          <span><b>${toDDMMYYYY(r.service_date)}</b> · ${(r.odometer||0).toLocaleString()} km · ${r.oil_type || "Engine Oil"}${r.oil_grade ? " ("+r.oil_grade+")" : ""}</span>
-          <span>${r.technician || "—"}</span>
-        </div>`).join("");
+    // Autofill customer name/phone from the most recent visit — only into
+    // fields the user hasn't already typed something into.
+    const latest = records[0];
+    if(!$("customerName").value.trim() && latest.customer_name) $("customerName").value = latest.customer_name;
+    if(!$("customerPhone").value.trim() && latest.customer_phone) $("customerPhone").value = latest.customer_phone;
+
+    box.innerHTML = `<div class="plate-history-title">Returning vehicle — full history below (${records.length} previous service${records.length===1?"":"s"})</div>`
+      + renderHistoryCards(records);
     box.classList.remove("hidden");
   }catch(e){
     box.classList.add("hidden");
@@ -315,6 +317,48 @@ function buildWhatsAppLink(r, comps){
   return `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
 }
 
+function compsFor(r){
+  const c = [];
+  if(r.comp_oil_filter) c.push("Oil Filter");
+  if(r.comp_cabin_filter) c.push("Cabin Filter");
+  if(r.comp_engine_filter) c.push("Engine Filter");
+  return c;
+}
+
+// Renders a set of past service records as attractive cards (used for the
+// returning-customer preview in Service Entry, and the per-vehicle history
+// panel in Service Records). Each card can send its own WhatsApp message.
+function renderHistoryCards(records){
+  if(!records.length) return `<p class="empty">No previous service history for this vehicle.</p>`;
+  return `<div class="history-cards">` + records.map(r => {
+    const comps = compsFor(r);
+    const compHtml = comps.length
+      ? comps.map(c => `<span class="tag">${c}</span>`).join("")
+      : `<span class="history-sub">No extra components changed</span>`;
+    const waLink = buildWhatsAppLink(r, comps);
+    const waButton = waLink
+      ? `<a class="waBtn waBtn-sm" href="${waLink}" target="_blank" rel="noopener">WhatsApp</a>`
+      : `<span class="waBtn waBtn-sm waBtn-disabled" title="No phone number on file">WhatsApp</span>`;
+    return `<div class="history-card">
+      <div class="history-card-top">
+        <span class="history-date">${toDDMMYYYY(r.service_date)}</span>
+        ${waButton}
+      </div>
+      <div class="history-grid">
+        <div class="history-field"><span class="history-label">Odometer</span><span class="history-value">${(r.odometer||0).toLocaleString()} km</span></div>
+        <div class="history-field"><span class="history-label">Oil Type</span><span class="history-value">${r.oil_type||"Engine Oil"}</span></div>
+        <div class="history-field"><span class="history-label">Oil Grade</span><span class="history-value">${r.oil_grade||"—"}</span></div>
+        <div class="history-field"><span class="history-label">Qty Used</span><span class="history-value">${r.oil_qty ?? "—"} L</span></div>
+        <div class="history-field"><span class="history-label">Technician</span><span class="history-value">${r.technician||"—"}</span></div>
+      </div>
+      <div class="history-components">${compHtml}</div>
+      <div class="history-next">
+        <span>Next expected: <b>${toDDMMYYYY(r.next_service_date)}</b> · <b>${(r.next_odometer||0).toLocaleString()} km</b></span>
+      </div>
+    </div>`;
+  }).join("") + `</div>`;
+}
+
 function renderRecords(records){
   const list = $("recordsList");
   if(records.length === 0){
@@ -322,10 +366,7 @@ function renderRecords(records){
     return;
   }
   list.innerHTML = records.map(r => {
-    const comps = [];
-    if(r.comp_oil_filter) comps.push("Oil Filter");
-    if(r.comp_cabin_filter) comps.push("Cabin Filter");
-    if(r.comp_engine_filter) comps.push("Engine Filter");
+    const comps = compsFor(r);
     const compHtml = comps.length ? comps.map(c=>`<span class="tag">${c}</span>`).join("") : `<span class="record-sub">No extra components changed</span>`;
     const vehicle = [r.vehicle_make, r.vehicle_model].filter(Boolean).join(" ") || "—";
     const waLink = buildWhatsAppLink(r, comps);
@@ -391,13 +432,7 @@ function renderRecords(records){
           const res = await fetch(`/api/records/by-plate/${encodeURIComponent(btn.dataset.plate)}`);
           const all = await res.json();
           const others = all.filter(x => String(x.id) !== String(btn.dataset.id));
-          box.innerHTML = others.length
-            ? others.map(o => `
-              <div class="record-history-item">
-                <span><b>${toDDMMYYYY(o.service_date)}</b> · ${(o.odometer||0).toLocaleString()} km · ${o.oil_type||"Engine Oil"}${o.oil_grade ? " ("+o.oil_grade+")" : ""}</span>
-                <span>${o.technician||"—"}</span>
-              </div>`).join("")
-            : `<span class="empty">No other service history for this vehicle.</span>`;
+          box.innerHTML = `<div class="record-history-title">Full service history for ${btn.dataset.plate} (${others.length} other record${others.length===1?"":"s"})</div>` + renderHistoryCards(others);
           box.dataset.loaded = "1";
         }catch(e){
           box.innerHTML = `<span class="empty">Could not load history.</span>`;
@@ -485,6 +520,25 @@ function daysBetween(iso){
   return Math.round((target - today) / 86400000);
 }
 
+function buildReminderWhatsAppLink(r){
+  const waNumber = toWhatsAppNumber(r.customer_phone);
+  if(!waNumber) return null;
+  const greetingName = (r.customer_name && r.customer_name.trim()) || "Sir/Madam";
+  const message = [
+    `Dear ${greetingName},`,
+    ``,
+    `This is a friendly reminder from *Nandana Auto Electricals & Spare Parts* that your vehicle's next oil change is due.`,
+    ``,
+    `*Expected Service:* ${toDDMMYYYYSlash(r.next_service_date)} or ${(r.next_odometer||0).toLocaleString()} km`,
+    ``,
+    `Please visit us at your convenience to keep your vehicle running smoothly.`,
+    ``,
+    `Best regards,`,
+    `*Nandana Auto Electricals & Spare Parts*`,
+  ].join("\n");
+  return `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+}
+
 function renderReminders(records){
   const list = $("remindersList");
   const badge = $("reminderCount");
@@ -502,10 +556,14 @@ function renderReminders(records){
     const status = overdue
       ? `<span class="badge-overdue">${Math.abs(d)} day${Math.abs(d)===1?"":"s"} overdue</span>`
       : `<span class="badge-soon">Due in ${d} day${d===1?"":"s"}</span>`;
+    const waLink = buildReminderWhatsAppLink(r);
+    const waButton = waLink
+      ? `<a class="waBtn waBtn-sm" href="${waLink}" target="_blank" rel="noopener">WhatsApp</a>`
+      : `<span class="waBtn waBtn-sm waBtn-disabled" title="No phone number on file">WhatsApp</span>`;
     return `<div class="reminder-card ${overdue ? "overdue" : "soon"}">
       <div class="reminder-card-top">
         <span class="reminder-plate">${r.plate||""}</span>
-        ${status}
+        <div class="reminder-actions">${status} ${waButton}</div>
       </div>
       <div class="reminder-card-body">
         <div class="reminder-info">
@@ -566,6 +624,7 @@ $("saveBtn").addEventListener("click", async () => {
   };
 
   $("saveStatus").textContent = "Saving…";
+  $("saveWhatsAppBox").innerHTML = "";
   try{
     const res = await fetch("/api/records", {
       method: "POST",
@@ -573,7 +632,12 @@ $("saveBtn").addEventListener("click", async () => {
       body: JSON.stringify(payload),
     });
     if(!res.ok) throw new Error("save failed");
+    const saved = await res.json();
     $("saveStatus").textContent = "Saved.";
+    const waLink = buildWhatsAppLink(saved, compsFor(saved));
+    $("saveWhatsAppBox").innerHTML = waLink
+      ? `<a class="btn secondary waSendBtn" href="${waLink}" target="_blank" rel="noopener">📱 Send WhatsApp Confirmation to ${saved.customer_name || "customer"}</a>`
+      : `<span class="note">No phone number on file — add one to send a WhatsApp confirmation.</span>`;
     ["plate","customerName","customerPhone","vehicleModel","serviceDate","odometer","oilQty"].forEach(id => $(id).value = "");
     $("compOilFilter").checked = false;
     $("compCabinFilter").checked = false;
