@@ -379,6 +379,7 @@ function renderRecords(records){
         <div class="record-actions">
           <button class="historyBtn" data-plate="${r.plate||""}" data-id="${r.id}">History</button>
           ${waButton}
+          <button class="editBtn" data-id="${r.id}">Edit</button>
           <button data-id="${r.id}" class="delRecord">Delete</button>
         </div>
       </div>
@@ -442,7 +443,69 @@ function renderRecords(records){
       }
     });
   });
+  list.querySelectorAll(".editBtn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      try{
+        const res = await fetch(`/api/records/${btn.dataset.id}`);
+        if(!res.ok) throw new Error("not found");
+        const record = await res.json();
+        startEditingRecord(record);
+      }catch(e){
+        alert("Could not load this record for editing.");
+      }
+    });
+  });
 }
+
+// ---------- Edit an existing record ----------
+let editingRecordId = null;
+
+function startEditingRecord(r){
+  editingRecordId = r.id;
+  $("plate").value = r.plate || "";
+  $("serviceDate").value = r.service_date ? String(r.service_date).slice(0,10) : "";
+  $("customerName").value = r.customer_name || "";
+  $("customerPhone").value = r.customer_phone || "";
+  $("odometer").value = r.odometer ?? "";
+  $("oilType").value = r.oil_type || "Engine Oil";
+  fillSelect($("oilGrade"), gradesForCurrentOilType(), "Add a grade in Settings first");
+  $("oilGrade").value = r.oil_grade || "";
+  $("oilQty").value = r.oil_qty ?? "";
+  $("vehicleMake").value = r.vehicle_make || "";
+  $("vehicleModel").value = r.vehicle_model || "";
+  $("technician").value = r.technician || "";
+  $("compOilFilter").checked = !!r.comp_oil_filter;
+  $("compCabinFilter").checked = !!r.comp_cabin_filter;
+  $("compEngineFilter").checked = !!r.comp_engine_filter;
+  $("plateHistoryBox").classList.add("hidden");
+  $("plateHistoryBox").innerHTML = "";
+  updatePreview();
+
+  $("saveBtn").textContent = "Update Service Record";
+  $("editBanner").classList.remove("hidden");
+  $("editBanner").textContent = `Editing service record for ${r.plate} — save to apply changes, or cancel to discard.`;
+  $("cancelEditBtn").classList.remove("hidden");
+  showTab("entry");
+  $("panelEntry").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function stopEditingRecord(){
+  editingRecordId = null;
+  $("saveBtn").textContent = "Save Service Record";
+  $("editBanner").classList.add("hidden");
+  $("cancelEditBtn").classList.add("hidden");
+}
+
+$("cancelEditBtn").addEventListener("click", () => {
+  stopEditingRecord();
+  ["plate","customerName","customerPhone","vehicleModel","serviceDate","odometer","oilQty"].forEach(id => $(id).value = "");
+  $("compOilFilter").checked = false;
+  $("compCabinFilter").checked = false;
+  $("compEngineFilter").checked = false;
+  $("oilType").value = "Engine Oil";
+  fillSelect($("oilGrade"), gradesForCurrentOilType(), "Add a grade in Settings first");
+  updatePreview();
+});
 
 async function refreshRecords(){
   const search = $("recordsSearch").value.trim();
@@ -623,15 +686,19 @@ $("saveBtn").addEventListener("click", async () => {
     comp_engine_filter: $("compEngineFilter").checked,
   };
 
-  $("saveStatus").textContent = "Saving…";
+  $("saveStatus").textContent = editingRecordId ? "Updating…" : "Saving…";
   try{
-    const res = await fetch("/api/records", {
-      method: "POST",
+    const url = editingRecordId ? `/api/records/${editingRecordId}` : "/api/records";
+    const method = editingRecordId ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     if(!res.ok) throw new Error("save failed");
-    $("saveStatus").textContent = "Saved.";
+    const wasEditing = !!editingRecordId;
+    $("saveStatus").textContent = wasEditing ? "Record updated." : "Saved.";
+    stopEditingRecord();
     ["plate","customerName","customerPhone","vehicleModel","serviceDate","odometer","oilQty"].forEach(id => $(id).value = "");
     $("compOilFilter").checked = false;
     $("compCabinFilter").checked = false;
@@ -644,9 +711,10 @@ $("saveBtn").addEventListener("click", async () => {
     await refreshRecords();
     await refreshSummary();
     await refreshReminders();
+    if(wasEditing) showTab("records");
     setTimeout(() => $("saveStatus").textContent = "", 2500);
   }catch(e){
-    $("saveStatus").textContent = "Could not save — please try again.";
+    $("saveStatus").textContent = editingRecordId ? "Could not update — please try again." : "Could not save — please try again.";
   }
 });
 

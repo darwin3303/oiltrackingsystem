@@ -116,6 +116,17 @@ input[type=text], input[type=number], input[type=date], input[type=tel], select{
   border-radius:8px; padding:6px 12px; font-size:0.85rem; font-weight:600; cursor:pointer;
 }
 .historyBtn:hover{background:var(--bg);}
+.editBtn{
+  border:1px solid var(--border); background:none; color:var(--text);
+  border-radius:8px; padding:6px 12px; font-size:0.85rem; font-weight:600; cursor:pointer;
+}
+.editBtn:hover{background:var(--bg);}
+.edit-banner{
+  padding:10px 14px; border-radius:8px; margin-bottom:16px; font-size:0.85rem; font-weight:600;
+  background:var(--accent); color:var(--accent-text);
+}
+.edit-banner.hidden{display:none;}
+#cancelEditBtn.hidden{display:none;}
 .plate-history{
   margin-top:8px; padding:10px 12px; border:1px solid var(--border); border-radius:8px;
   background:var(--bg); font-size:0.82rem;

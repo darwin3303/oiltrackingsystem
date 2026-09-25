@@ -89,6 +89,8 @@ oil-app/
 | GET    | /api/health                 | Used by the status pill                    |
 | GET    | /api/records?search=PLATE   | List records, optionally filtered by plate |
 | GET    | /api/records/by-plate/:plate | Full history for one exact vehicle        |
+| GET    | /api/records/:id             | Fetch a single record (used to open Edit) |
+| PUT    | /api/records/:id             | Update a record (next date/odometer recalculated) |
 | POST   | /api/records                | Create a record (next date/odometer auto)  |
 | DELETE | /api/records/:id            | Delete a record                            |
 | GET/POST/DELETE | /api/oil_grades, /api/atf_grades, /api/cvt_grades, /api/manual_transmission_grades, /api/technicians, /api/vehicle_makes | Manage dropdown lists |

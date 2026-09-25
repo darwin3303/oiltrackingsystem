@@ -140,6 +140,49 @@ app.post('/api/records', async (req, res) => {
   }
 });
 
+// GET /api/records/:id -> a single record, used when opening the edit form.
+app.get('/api/records/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM service_records WHERE id = $1', [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: 'not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/records/:id', async (req, res) => {
+  const r = req.body;
+  if (!r.plate || !r.service_date || r.odometer === undefined || r.odometer === null) {
+    return res.status(400).json({ error: 'plate, service_date and odometer are required' });
+  }
+  try {
+    const nextServiceDate = addMonths(r.service_date, 6);
+    const nextOdometer = Number(r.odometer) + 5000;
+    const { rows } = await pool.query(
+      `UPDATE service_records SET
+         plate = $1, customer_name = $2, customer_phone = $3, vehicle_make = $4, vehicle_model = $5,
+         service_date = $6, odometer = $7, oil_type = $8, oil_grade = $9, oil_qty = $10, technician = $11,
+         comp_oil_filter = $12, comp_cabin_filter = $13, comp_engine_filter = $14,
+         next_service_date = $15, next_odometer = $16
+       WHERE id = $17
+       RETURNING *`,
+      [
+        r.plate, r.customer_name || null, r.customer_phone || null,
+        r.vehicle_make || null, r.vehicle_model || null,
+        r.service_date, r.odometer, r.oil_type || null, r.oil_grade || null, r.oil_qty ?? null, r.technician || null,
+        !!r.comp_oil_filter, !!r.comp_cabin_filter, !!r.comp_engine_filter,
+        nextServiceDate, nextOdometer,
+        req.params.id,
+      ]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete('/api/records/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM service_records WHERE id = $1', [req.params.id]);
